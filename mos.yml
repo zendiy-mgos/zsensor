@@ -1,0 +1,19 @@
+author: ZenDIY
+type: lib
+description: Mongoose-OS library for ZenSensors ecosystem.
+version: 1.0
+
+sources:
+  - src
+includes:
+  - include
+filesystem:
+  - fs
+config_schema:
+libs:
+  - origin: https://github.com/zendiy-mgos/zthing
+tags:
+  - c
+  - docs:misc:ZenButton
+
+manifest_version: 2017-09-29
