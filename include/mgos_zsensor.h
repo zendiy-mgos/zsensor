@@ -57,28 +57,33 @@ struct mgos_zsensor {
   ZTHING_STATE_UPDATED_NOTIFY_IF_CHANGED }
 
 struct mgos_zsensor_cfg {
-  enum mgos_zthing_state_updated_notify_mode updated_notify_mode;
+  enum mgos_zthing_upd_notify_mode upd_notify_mode;
 };
 
 struct mgos_zsensor_state {
   struct mgos_zsensor *handle;
-  struct mgos_zvariant value;
-  const char* str_value;
+  struct mgos_zvariant *value;
 };
 
-typedef bool (*mgos_zsensor_value_handler_t)(struct mgos_zsensor *handle,
-                                             struct mgos_zvariant *value,
+struct mgos_zsensor_state_upd {
+  struct mgos_zsensor *handle;
+  struct mgos_zvariant *value;
+  struct mgos_zvariant *prev_value;
+};
+
+typedef bool (*mgos_zsensor_state_handler_t)(enum mgos_zthing_state_act act,
+                                             struct mgos_zsensor_state *state,
                                              void *user_data);
 
 struct mgos_zsensor *mgos_zsensor_create(const char *id,
                                          enum mgos_zsensor_type sensor_type,
                                          struct mgos_zsensor_cfg *cfg);
 
-bool mgos_zsensor_value_handler_set(struct mgos_zsensor *handle,
-                                    mgos_zsensor_value_handler_t handler,
+bool mgos_zsensor_state_handler_set(struct mgos_zsensor *handle,
+                                    mgos_zsensor_state_handler_t handler,
                                     void *user_data);
 
-void mgos_zsensor_value_handler_reset(struct mgos_zsensor *handle);
+void mgos_zsensor_state_handler_reset(struct mgos_zsensor *handle);
 
 bool mgos_zsensor_polling_set(struct mgos_zsensor *handle, int polling_ticks);
 bool mgos_zsensor_polling_pause(struct mgos_zsensor *handle);
@@ -93,10 +98,12 @@ bool mgos_zsensor_int_clear(struct mgos_zsensor *handle);
 
 void mgos_zsensor_close(struct mgos_zsensor *handle);
 
-struct mgos_zvariant *mgos_zsensor_value_get(struct mgos_zsensor *handle);
-const char *mgos_zsensor_str_value_get(struct mgos_zsensor *handle);
+struct mgos_zvariant *mgos_zsensor_state_get(struct mgos_zsensor *handle);
 
-bool mgos_zsensor_str_values_set(struct mgos_zsensor *handle, ...);
+const char *mgos_zsensor_state_name_get(struct mgos_zsensor *handle);
+const char *mgos_zsensor_state_name_by_val(struct mgos_zsensor *handle, int value);
+bool mgos_zsensor_state_name_set(struct mgos_zsensor *handle, int value, const char *name);
+void mgos_zsensor_state_names_clear(struct mgos_zsensor *handle);
 
 void mgos_zsensor_cfg_get(struct mgos_zsensor *handle, struct mgos_zsensor_cfg *cfg);
 

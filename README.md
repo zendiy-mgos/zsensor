@@ -64,13 +64,36 @@ Sensor configuration values (e.g.: used by `mgos_zsensor_create()`).
 
 |Field||
 |--|--|
-|updated_notify_mode|How the sensor must notify ist state has been updated. See [notify modes](https://github.com/zendiy-mgos/zthing/blob/master/README.md#enum-mgos_zthing_state_updated_notify_mode) for more details.|
+|updated_notify_mode|One of the [state-updated notify modes](https://github.com/zendiy-mgos/zthing/blob/master/README.md#enum-mgos_zthing_state_updated_notify_mode) values. This value indicates how the sensor notifies its state has been updated.|
 
 **Example** - Create and initialize configuration settings.
 ```c
 // create and initialize cfg using defaults
 struct mgos_zsensor_cfg cfg = MGOS_ZSENSOR_CFG;
 ```
+### mgos_zsensor_create()
+```c
+struct mgos_zsensor *mgos_zsensor_create(const char *id,
+                                         enum mgos_zsensor_type sensor_type,
+                                         struct mgos_zsensor_cfg *cfg);
+```
+Creates and initializes the sensor instance. Returns the instance handle, or `NULL` on error.
+
+|Parameter||
+|--|--|
+|id|Unique ID.|
+|sensor_type|Sensor type.|
+|cfg|Optional. [Sensor configuration](https://github.com/zendiy-mgos/zsensor#mgos_zsensor_cfg). If `NULL`, default configuration values are used.|
+### mgos_zsensor_()
+```c
+
+```
+Description.
+
+|Parameter||
+|--|--|
+|||
+
 
 ## JS API Reference
 *Under construction...*
