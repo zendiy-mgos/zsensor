@@ -71,6 +71,13 @@ struct mgos_zsensor_state_upd {
   struct mgos_zvariant *prev_value;
 };
 
+struct mgos_zsensor_int_cfg {
+  int pin;
+  enum mgos_gpio_int_mode mode;
+  enum mgos_gpio_pull_type pull_type;
+  int debounce;
+};
+
 typedef bool (*mgos_zsensor_state_handler_t)(enum mgos_zthing_state_act act,
                                              struct mgos_zsensor_state *state,
                                              void *user_data);
@@ -91,11 +98,12 @@ bool mgos_zsensor_poll_restart(struct mgos_zsensor *handle);
 bool mgos_zsensor_poll_clear(struct mgos_zsensor *handle);
 
 bool mgos_zsensor_int_set(struct mgos_zsensor *handle, int int_pin,
-                          enum mgos_gpio_int_mode int_mode, enum mgos_gpio_pull_type pull_type,
+                          enum mgos_gpio_pull_type pull_type, enum mgos_gpio_int_mode int_mode,
                           int debounce_ms);
 bool mgos_zsensor_int_pause(struct mgos_zsensor *handle);
 bool mgos_zsensor_int_restart(struct mgos_zsensor *handle);
 bool mgos_zsensor_int_clear(struct mgos_zsensor *handle);
+bool mgos_zsensor_int_cfg_get(struct mgos_zsensor *handle, struct mgos_zsensor_int_cfg *cfg);
 
 void mgos_zsensor_close(struct mgos_zsensor *handle);
 

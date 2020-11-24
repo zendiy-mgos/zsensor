@@ -18,7 +18,7 @@ struct mg_zsensor {
   struct mgos_zsensor_cfg cfg;
   int poll_timer_id;
   int poll_ticks;
-  int int_pin;
+  struct mgos_zsensor_int_cfg intr;
   unsigned char is_updating;
   struct mgos_zvariant value;
   struct mg_zsensor_state_handler state_handler;
@@ -70,7 +70,12 @@ struct mgos_zsensor *mgos_zsensor_create(const char *id,
     handle->type = sensor_type;
     handle->poll_timer_id = MGOS_INVALID_TIMER_ID;
     handle->poll_ticks = MGOS_ZTHING_NO_TICKS;
-    handle->int_pin = MGOS_ZTHING_NO_PIN;
+    
+    handle->intr.pin = MGOS_ZTHING_NO_PIN;
+    handle->intr.mode = MGOS_GPIO_INT_NONE;
+    handle->intr.pull_type = MGOS_GPIO_PULL_NONE;
+    handle->intr.debounce = 0;
+
     handle->state_names = NULL;
     handle->is_updating = 0;
     mgos_zvariant_nav_set(&handle->value);
@@ -132,16 +137,19 @@ bool mgos_zsensor_poll_clear(struct mgos_zsensor *handle) {
 
 static void mg_zsensor_int_cb(int, void *);
 bool mgos_zsensor_int_set(struct mgos_zsensor *handle, int int_pin,
-                          enum mgos_gpio_int_mode int_mode, enum mgos_gpio_pull_type pull_type,
+                          enum mgos_gpio_pull_type pull_type, enum mgos_gpio_int_mode int_mode,
                           int debounce_ms) {
   struct mg_zsensor *h = MG_ZSENSOR_CAST(handle);
   if (!h) return false;
-  if (h->int_pin != MGOS_ZTHING_NO_PIN) {
+  if (h->intr.pin != MGOS_ZTHING_NO_PIN) {
     return false;
   }
-  if (int_pin == MGOS_ZTHING_NO_PIN && int_mode == MGOS_GPIO_INT_NONE) {
-    if (mgos_gpio_set_int_handler(int_pin, int_mode, mg_zsensor_int_cb, handle)) {
-      h->int_pin = int_pin;
+  if (int_pin == MGOS_ZTHING_NO_PIN && int_mode != MGOS_GPIO_INT_NONE) {
+    if (mgos_gpio_set_button_handler(int_pin, pull_type, int_mode, debounce_ms, mg_zsensor_int_cb, handle)) {
+      h->intr.pin = int_pin;
+      h->intr.mode = int_mode;
+      h->intr.pull_type = pull_type;
+      h->intr.debounce = debounce_ms;
       return true;
     }
   }
@@ -150,21 +158,24 @@ bool mgos_zsensor_int_set(struct mgos_zsensor *handle, int int_pin,
 
 bool mgos_zsensor_int_pause(struct mgos_zsensor *handle) {
   struct mg_zsensor *h = MG_ZSENSOR_CAST(handle);
-  return (h ? mgos_gpio_disable_int(h->int_pin) : false);
+  return (h ? mgos_gpio_disable_int(h->intr.pin) : false);
 }
 
 bool mgos_zsensor_int_restart(struct mgos_zsensor *handle) {
   struct mg_zsensor *h = MG_ZSENSOR_CAST(handle);
-  return (h ? mgos_gpio_enable_int(h->int_pin) : false);
+  return (h ? mgos_gpio_enable_int(h->intr.pin) : false);
 }
 
 bool mgos_zsensor_int_clear(struct mgos_zsensor *handle) {
   struct mg_zsensor *h = MG_ZSENSOR_CAST(handle);
   if (!h) return false;
-  if (h->int_pin != MGOS_ZTHING_NO_PIN) {
-    if (!mgos_gpio_disable_int(h->int_pin)) return false;
-    mgos_gpio_remove_int_handler(h->int_pin, NULL, NULL);
-    h->int_pin = MGOS_ZTHING_NO_PIN;
+  if (h->intr.pin != MGOS_ZTHING_NO_PIN) {
+    if (!mgos_gpio_disable_int(h->intr.pin)) return false;
+    mgos_gpio_remove_int_handler(h->intr.pin, NULL, NULL);
+    h->intr.pin = MGOS_ZTHING_NO_PIN;
+    h->intr.mode = MGOS_GPIO_INT_NONE;
+    h->intr.pull_type = MGOS_GPIO_PULL_NONE;
+    h->intr.debounce = 0;
   }
   return true;
 }
@@ -184,6 +195,15 @@ void mgos_zsensor_state_names_clear(struct mgos_zsensor *handle) {
   }
 }
 
+bool mgos_zsensor_int_cfg_get(struct mgos_zsensor *handle, struct mgos_zsensor_int_cfg *cfg) {
+  struct mg_zsensor *h = MG_ZSENSOR_CAST(handle);
+  if (!h || !cfg || (h->intr.pin == MGOS_ZTHING_NO_PIN)) return false;
+  cfg->pin = h->intr.pin;
+  cfg->mode = h->intr.mode;
+  cfg->pull_type = h->intr.pull_type;
+  cfg->debounce = h->intr.debounce;
+  return true;
+}
 
 void mgos_zsensor_close(struct mgos_zsensor *handle) {
   struct mg_zsensor *h = MG_ZSENSOR_CAST(handle);
@@ -229,7 +249,7 @@ void mgos_zsensor_state_handler_reset(struct mgos_zsensor *handle) {
 bool mg_zsensor_state_try_update(struct mg_zsensor *handle, bool skip_notify_update) {
   if (!handle || !handle->state_handler.invoke) return false;
   if (handle->poll_ticks == MGOS_ZTHING_NO_TICKS && 
-      handle->int_pin != MGOS_ZTHING_NO_PIN) {
+      handle->intr.pin != MGOS_ZTHING_NO_PIN) {
     // The value update can be done only on interrupt.
     return true;
   }
@@ -375,7 +395,7 @@ static void mg_zsensor_update_state_cb(int ev, void *ev_data, void *ud) {
 }
 
 static void mg_zsensor_int_cb(int pin, void *arg) {
-  if (arg != NULL && MG_ZSENSOR_CAST(arg)->int_pin == pin) {
+  if (arg != NULL && MG_ZSENSOR_CAST(arg)->intr.pin == pin) {
     mg_zsensor_state_try_update(MG_ZSENSOR_CAST(arg), false);
   }
 }
