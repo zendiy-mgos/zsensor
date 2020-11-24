@@ -151,7 +151,7 @@ Sensor configuration values (e.g.: used by `mgos_zsensor_create()`).
 
 |Field||
 |--|--|
-|upd_notify_mode|One of the [state-updated notify modes](https://github.com/zendiy-mgos/zthing/blob/master/README.md#enum-mgos_zthing_state_updated_notify_mode) values. This value indicates how the sensor notifies its state has been updated.|
+|upd_notify_mode|One of the [state-updated notify modes](https://github.com/zendiy-mgos/zthing/blob/master/README.md#enum-mgos_zthing_upd_notify_mode) values. This value indicates how the sensor notifies its state has been updated.|
 
 **Example** - Create and initialize configuration settings.
 ```c
