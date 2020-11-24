@@ -51,7 +51,7 @@ struct mgos_zsensor {
 
 #define MGOS_ZSENSOR_CAST(h) ((struct mgos_zsensor *)h)
 
-#define MGOS_ZSENSOR_DEFAULT_POLLING_TICKS 1000 //milliseconds
+#define MGOS_ZSENSOR_DEFAULT_poll_TICKS 1000 //milliseconds
 
 #define MGOS_ZSENSOR_CFG {                    \
   ZTHING_STATE_UPDATED_NOTIFY_IF_CHANGED }
@@ -85,13 +85,14 @@ bool mgos_zsensor_state_handler_set(struct mgos_zsensor *handle,
 
 void mgos_zsensor_state_handler_reset(struct mgos_zsensor *handle);
 
-bool mgos_zsensor_polling_set(struct mgos_zsensor *handle, int polling_ticks);
-bool mgos_zsensor_polling_pause(struct mgos_zsensor *handle);
-bool mgos_zsensor_polling_restart(struct mgos_zsensor *handle);
-bool mgos_zsensor_polling_clear(struct mgos_zsensor *handle);
+bool mgos_zsensor_poll_set(struct mgos_zsensor *handle, int poll_ticks);
+bool mgos_zsensor_poll_pause(struct mgos_zsensor *handle);
+bool mgos_zsensor_poll_restart(struct mgos_zsensor *handle);
+bool mgos_zsensor_poll_clear(struct mgos_zsensor *handle);
 
-bool mgos_zsensor_int_set(struct mgos_zsensor *handle,
-                          int int_pin, enum mgos_gpio_int_mode int_mode);
+bool mgos_zsensor_int_set(struct mgos_zsensor *handle, int int_pin,
+                          enum mgos_gpio_int_mode int_mode, enum mgos_gpio_pull_type pull_type,
+                          int debounce_ms);
 bool mgos_zsensor_int_pause(struct mgos_zsensor *handle);
 bool mgos_zsensor_int_restart(struct mgos_zsensor *handle);
 bool mgos_zsensor_int_clear(struct mgos_zsensor *handle);

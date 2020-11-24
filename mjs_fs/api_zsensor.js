@@ -7,12 +7,12 @@ let ZenSensor = {
   _cls: ffi('void mgos_zsensor_close(void *)'),
   _cfgc: ffi('void *mjs_zsensor_cfg_create(int)'),
 
-  _polls: ffi('bool mgos_zsensor_polling_set(void *, int)'),
-  _pollp: ffi('bool mgos_zsensor_polling_pause(void *)'),
-  _pollr: ffi('bool mgos_zsensor_polling_restart(void *)'),
-  _pollc: ffi('bool mgos_zsensor_polling_clear(void *)'),
+  _polls: ffi('bool mgos_zsensor_poll_set(void *, int)'),
+  _pollp: ffi('bool mgos_zsensor_poll_pause(void *)'),
+  _pollr: ffi('bool mgos_zsensor_poll_restart(void *)'),
+  _pollc: ffi('bool mgos_zsensor_poll_clear(void *)'),
 
-  _ints: ffi('bool mgos_zsensor_int_set(void *, int, int)'),
+  _ints: ffi('bool mgos_zsensor_int_set(void *, int, int, int, int)'),
   _intp: ffi('bool mgos_zsensor_int_pause(void *)'),
   _intr: ffi('bool mgos_zsensor_int_restart(void *)'),
   _intc: ffi('bool mgos_zsensor_int_clear(void *)'),
@@ -67,14 +67,14 @@ let ZenSensor = {
   //
   // Example:
   // ```javascript
-  // let cfg = {updatedNotifyMode: ZenSensor.STATE_UPDATED_NOTIFY.IF_CHANGED}
+  // let cfg = {updNotifyMode: ZenThing.STATE_UPD_NOTIFY.IF_CHANGED}
   // let s = ZenSensor.create('sens1', ZenSensor.TYPE.BINARY, cfg);
   // ```
   create: function(id, type, cfg) {
     let cfgo = null;
     if (cfg) {
       cfgo = ZenSensor._cfgc(
-        ZenThing._getSafe(cfg.updatedNotifyMode, -1)
+        ZenThing._getSafe(cfg.updNotifyMode, -1)
       );
       if (cfgo == null) return null;
     }
@@ -103,29 +103,29 @@ let ZenSensor = {
       ZenSensor._cls(this.handle);
     },
 
-    setPolling: function(ticks) {
+    setPoll: function(ticks) {
       return ZenSensor._polls(this.handle, ticks);
     },
-    pausePolling: function() {
+    pausePoll: function() {
       return ZenSensor._pollp(this.handle);
     },
-    restartPolling: function() {
+    restartPoll: function() {
       return ZenSensor._pollr(this.handle);
     },
-    clearPolling: function() {
+    clearPoll: function() {
       return ZenSensor._pollc(this.handle);
     },
   
-    setInterrupt: function(pin, mode) {
-      return ZenSensor._ints(this.handle, pin, mode);
+    setInt: function(pin, mode, pullType, debounce) {
+      return ZenSensor._ints(this.handle, pin, mode, pullType, (debounce || 0));
     },
-    pauseInterrupt: function() {
+    pauseInt: function() {
       return ZenSensor._intp(this.handle);
     },
-    restartInterrupt: function() {
+    restartInt: function() {
       return ZenSensor._intr(this.handle);
     },
-    clearInterrupt: function() {
+    clearInt: function() {
       return ZenSensor._intc(this.handle);
     },
    
@@ -154,7 +154,7 @@ let ZenSensor = {
       return ZenSensor._shr(this.handle);
     },
 
-    onStateUpdated: function(handler, userdata) {
+    onStateUpd: function(handler, userdata) {
       Event.addHandler(ZenThing.EV_STATE_UPDATED, function(ev, evdata, ud) {
         let state = ZenSensor.parseStateUpd(evdata);
         ud.h(state, ud.ud);

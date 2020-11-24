@@ -10,13 +10,100 @@ libs:
 **C/C++ sample code**
 ```c
 #include "mgos.h"
-#include "mgos_zsensor_gpio.h"
-//Under construction...
+#include "mgos_zsensor.h"
+
+ static bool mg_zsensor_state_h(enum mgos_zthing_state_act act,
+                                struct mgos_zsensor_state *state,
+                                void *user_data) {
+  if (act == MGOS_ZTHING_STATE_GET) {
+    // int sens_read = <-- read here sensor value
+    mgos_zvariant_integer_set(state->value, sens_read);
+    return true;
+  }
+  return false;
+  (void) user_data;
+}
+
+void mg_zsensor_state_updated_cb(int ev, void *ev_data, void *userdata) {
+  struct mgos_zsensor_state_upd *state = (struct mgos_zsensor_state_upd *)ev_data;
+  struct mgos_zsensor *handle = state->handle;
+
+  int cur_val = MGOS_ZVARIANT_PTR_CAST(state->value, int);
+  if(mgos_zvariant_is_nav(state->prev_value)) {
+    LOG(LL_INFO, ("Updating '%s' value to '%s'(%d)", handle->id, 
+      mgos_zsensor_state_name_by_val(handle, cur_val), cur_val));
+  } else {
+    int prev_val = MGOS_ZVARIANT_PTR_CAST(state->prev_value, int);
+    LOG(LL_INFO, ("Updating '%s' value from '%s'(%d) to '%s'(%d)", handle->id, 
+      mgos_zsensor_state_name_by_val(handle, prev_val), prev_val,
+      mgos_zsensor_state_name_by_val(handle, cur_val), cur_val));
+  }
+
+  (void) ev;
+  (void) userdata;
+}
+
+enum mgos_app_init_result mgos_app_init(void) {
+  struct mgos_zsensor *sens1 = mgos_zsensor_create("sens1", ZSENSOR_TYPE_INTEGER, NULL);
+
+  if (sens1 == NULL) return MGOS_APP_INIT_ERROR;
+
+  if (!mgos_zsensor_poll_set(sens1, 2000) || 
+      !mgos_zsensor_state_handler_set(sens1, mg_zsensor_state_h, NULL)) {
+    mgos_zsensor_close(sens1);
+    return MGOS_APP_INIT_ERROR;
+  }
+
+  mgos_zsensor_state_name_set(sens1, 0, "very low");
+  mgos_zsensor_state_name_set(sens1, 1, "low");
+  mgos_zsensor_state_name_set(sens1, 2, "normal");
+  mgos_zsensor_state_name_set(sens1, 3, "high");
+  mgos_zsensor_state_name_set(sens1, 4, "very high");
+
+  mgos_event_add_handler(MGOS_EV_ZTHING_STATE_UPDATED, mg_zsensor_state_updated_cb, NULL);
+
+  return MGOS_APP_INIT_SUCCESS;
+}
 ```
 **JavaScript sample code**
 ```js
-load("api_zsensor_gpio.js")
-//Under construction...
+load("api_zsensor.js")
+
+/* Create sensor using defualt configuration. */   
+let sens1 = ZenSensor.create('sens1', ZenSensor.TYPE.INTEGER);
+
+if (sens1) {
+  sens1.setStateName(0, 'very low');
+  sens1.setStateName(1, 'low');
+  sens1.setStateName(2, 'normal');
+  sens1.setStateName(3, 'high');
+  sens1.setStateName(4, 'very high');
+
+  sens1.setStateHandler(function(act, state, ud) {
+    if (act === ZenThing.ACT_STATE_GET) {
+      // let sensRead = <-- read here sensor value
+      ZenVar.int(state.value, sensRead);
+      return true;
+    }
+    return false;
+  }, null);
+
+  sens1.setPoll(2000);
+
+  sens1.onStateUpd(function(state, ud) {
+    let sens = state.thing;
+    let curVal = ZenVar.int(state.value);
+    if (ZenVar.isNaV(state.prevValue)) {
+      print('Updating', state.thing.id,
+        "to", sens.getStateNameByVal(curVal), "(", curVal, ")");    
+    } else {
+      let prevVal = ZenVar.int(state.prevValue);
+      print('Updating', state.thing.id,
+        'from', sens.getStateNameByVal(prevVal), "(", prevVal, ")",
+        "to", sens.getStateNameByVal(curVal), "(", curVal, ")");
+    }
+  }, null);
+}
 ```
 ## C/C++ API Reference
 ### mgos_zsensor
@@ -57,14 +144,14 @@ Binary sensor's handle detected.
 ### mgos_zsensor_cfg
 ```c
 struct mgos_zsensor_cfg {
-  enum mgos_zthing_state_updated_notify_mode updated_notify_mode;
+  enum mgos_zthing_upd_notify_mode upd_notify_mode;
 };
 ```
 Sensor configuration values (e.g.: used by `mgos_zsensor_create()`).
 
 |Field||
 |--|--|
-|updated_notify_mode|One of the [state-updated notify modes](https://github.com/zendiy-mgos/zthing/blob/master/README.md#enum-mgos_zthing_state_updated_notify_mode) values. This value indicates how the sensor notifies its state has been updated.|
+|upd_notify_mode|One of the [state-updated notify modes](https://github.com/zendiy-mgos/zthing/blob/master/README.md#enum-mgos_zthing_state_updated_notify_mode) values. This value indicates how the sensor notifies its state has been updated.|
 
 **Example** - Create and initialize configuration settings.
 ```c
