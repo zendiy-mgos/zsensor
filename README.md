@@ -188,6 +188,6 @@ Take a look to some other samples or libraries.
 
 |Reference|Type||
 |--|--|--|
-|[zsensor-gpio](https://github.com/zendiy-mgos/zsensor-gpio)|Library|Mongoose-OS library for attaching a [ZenSensor](https://github.com/zendiy-mgos/zsensor) to a gpio value.|
+|[zsensor-gpio](https://github.com/zendiy-mgos/zsensor-gpio)|Library|Mongoose-OS library for attaching a [ZenSensor](https://github.com/zendiy-mgos/zsensor) to a GPIO value.|
 |[zsensor-mqtt](https://github.com/zendiy-mgos/zsensor-mqtt)|Library|Mongoose-OS library for publishing [ZenSensor](https://github.com/zendiy-mgos/sensor) values as MQTT messages.|
 |[zsensor-mqtt-demo](https://github.com/zendiy-mgos/zsensor-mqtt-demo)|Firmware|[Mongoose-OS](https://mongoose-os.com/) demo firmware for publishing pushbutton events as MQTT messages.|
