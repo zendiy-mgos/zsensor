@@ -93,11 +93,11 @@ if (sens1) {
     let sens = state.thing;
     let curVal = ZenVar.int(state.value);
     if (ZenVar.isNaV(state.prevValue)) {
-      print('Updating', state.thing.id,
+      print('Updating', sens.id,
         "to", sens.getStateNameByVal(curVal), "(", curVal, ")");    
     } else {
       let prevVal = ZenVar.int(state.prevValue);
-      print('Updating', state.thing.id,
+      print('Updating', sens.id,
         'from', sens.getStateNameByVal(prevVal), "(", prevVal, ")",
         "to", sens.getStateNameByVal(curVal), "(", curVal, ")");
     }
