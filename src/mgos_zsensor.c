@@ -93,7 +93,7 @@ struct mgos_zsensor *mgos_zsensor_create(const char *id,
       }
       LOG(LL_ERROR, ("Error creating '%s'. Handle registration failed.", id));
     }
-    mgos_zsensor_close(MGOS_ZSENSOR_CAST(handle));
+    free(handle);
   } else {
     LOG(LL_ERROR, ("Error creating '%s'. Memory allocation failed.", id));
   }
@@ -104,35 +104,15 @@ static void mg_zsensor_poll_cb(void *);
 bool mgos_zsensor_poll_set(struct mgos_zsensor *handle, int poll_ticks) {
   struct mg_zsensor *h = MG_ZSENSOR_CAST(handle);
   if (h != NULL && poll_ticks > 0) {
-    h->poll_ticks = poll_ticks;
-    if (mgos_zsensor_poll_restart(handle)) return true;
-    h->poll_ticks = MGOS_ZTHING_NO_TICKS;
+    if (h->poll_timer_id != MGOS_INVALID_TIMER_ID) mgos_clear_timer(h->poll_timer_id);
+
+    h->poll_timer_id = mgos_set_timer(poll_ticks, MGOS_TIMER_REPEAT, mg_zsensor_poll_cb, handle);
+    if (h->poll_timer_id != MGOS_INVALID_TIMER_ID) {
+      h->poll_ticks = poll_ticks;
+      return true;
+    }
   }
   return false;
-}
-
-bool mgos_zsensor_poll_pause(struct mgos_zsensor *handle) {
-  struct mg_zsensor *h = MG_ZSENSOR_CAST(handle);
-  if (!h) return false;
-  if (h->poll_timer_id != MGOS_INVALID_TIMER_ID) {
-    mgos_clear_timer(h->poll_timer_id);
-    h->poll_timer_id = MGOS_INVALID_TIMER_ID;
-  }
-  return true;
-}
-
-bool mgos_zsensor_poll_restart(struct mgos_zsensor *handle) {
-  struct mg_zsensor *h = MG_ZSENSOR_CAST(handle);
-  if (h == NULL || h->poll_timer_id != MGOS_INVALID_TIMER_ID) return false;
-  h->poll_timer_id = mgos_set_timer(h->poll_ticks,
-    MGOS_TIMER_REPEAT, mg_zsensor_poll_cb, handle);
-  return (h->poll_timer_id != MGOS_INVALID_TIMER_ID);
-}
-
-bool mgos_zsensor_poll_clear(struct mgos_zsensor *handle) {
-  if (!mgos_zsensor_poll_pause(handle)) return false;
-  MG_ZSENSOR_CAST(handle)->poll_ticks = MGOS_ZTHING_NO_TICKS;
-  return true;
 }
 
 static void mg_zsensor_int_cb(int, void *);
@@ -142,57 +122,22 @@ bool mgos_zsensor_int_set(struct mgos_zsensor *handle, int int_pin,
   struct mg_zsensor *h = MG_ZSENSOR_CAST(handle);
   if (!h) return false;
   if (h->intr.pin != MGOS_ZTHING_NO_PIN) {
+    LOG(LL_ERROR, ("The sensor '%s' is already set to use interrupt on pin %d.", h->id, h->intr.pin));
     return false;
   }
-  if (int_pin == MGOS_ZTHING_NO_PIN && int_mode != MGOS_GPIO_INT_NONE) {
+  if (int_pin != MGOS_ZTHING_NO_PIN && int_mode != MGOS_GPIO_INT_NONE) {
     if (mgos_gpio_set_button_handler(int_pin, pull_type, int_mode, debounce_ms, mg_zsensor_int_cb, handle)) {
       h->intr.pin = int_pin;
       h->intr.mode = int_mode;
       h->intr.pull_type = pull_type;
       h->intr.debounce = debounce_ms;
+      LOG(LL_INFO, ("Interrupt pin %d successfully set for sensor '%s'.", int_pin, h->id));
       return true;
     }
+    LOG(LL_ERROR, ("Unable to set interrupt on pin %d for sensor '%s'.", int_pin, h->id));
   }
+  LOG(LL_ERROR, ("Unable to set interrupt. Wrong int_pin (%d) or int_mode (%d) parameters.", int_pin, int_mode));
   return false;
-}
-
-bool mgos_zsensor_int_pause(struct mgos_zsensor *handle) {
-  struct mg_zsensor *h = MG_ZSENSOR_CAST(handle);
-  return (h ? mgos_gpio_disable_int(h->intr.pin) : false);
-}
-
-bool mgos_zsensor_int_restart(struct mgos_zsensor *handle) {
-  struct mg_zsensor *h = MG_ZSENSOR_CAST(handle);
-  return (h ? mgos_gpio_enable_int(h->intr.pin) : false);
-}
-
-bool mgos_zsensor_int_clear(struct mgos_zsensor *handle) {
-  struct mg_zsensor *h = MG_ZSENSOR_CAST(handle);
-  if (!h) return false;
-  if (h->intr.pin != MGOS_ZTHING_NO_PIN) {
-    if (!mgos_gpio_disable_int(h->intr.pin)) return false;
-    mgos_gpio_remove_int_handler(h->intr.pin, NULL, NULL);
-    h->intr.pin = MGOS_ZTHING_NO_PIN;
-    h->intr.mode = MGOS_GPIO_INT_NONE;
-    h->intr.pull_type = MGOS_GPIO_PULL_NONE;
-    h->intr.debounce = 0;
-  }
-  return true;
-}
-
-void mgos_zsensor_state_names_clear(struct mgos_zsensor *handle) {
-  struct mg_zsensor *h = MG_ZSENSOR_CAST(handle);
-  if (h) {
-    struct mg_zsensor_state_name *vn = h->state_names;
-    struct mg_zsensor_state_name *vnn = NULL;
-    while (vn != NULL) {
-      vnn = vn->next; 
-      free((char *)vn->name);
-      free(vn);
-      vn = vnn;
-    }
-    h->state_names = NULL;
-  }
 }
 
 bool mgos_zsensor_int_cfg_get(struct mgos_zsensor *handle, struct mgos_zsensor_int_cfg *cfg) {
@@ -203,18 +148,6 @@ bool mgos_zsensor_int_cfg_get(struct mgos_zsensor *handle, struct mgos_zsensor_i
   cfg->pull_type = h->intr.pull_type;
   cfg->debounce = h->intr.debounce;
   return true;
-}
-
-void mgos_zsensor_close(struct mgos_zsensor *handle) {
-  struct mg_zsensor *h = MG_ZSENSOR_CAST(handle);
-  if (h) {
-    mgos_zsensor_poll_clear(handle);
-    mgos_zsensor_int_clear(handle);
-    mgos_zsensor_state_names_clear(handle);
-    mgos_zsensor_state_handler_reset(handle);
-    mgos_zvariant_nav_set(&h->value);
-  }
-  mgos_zthing_close(MGOS_ZTHING_CAST(h));
 }
 
 void mgos_zsensor_cfg_get(struct mgos_zsensor *handle, struct mgos_zsensor_cfg *cfg) {
@@ -238,22 +171,9 @@ bool mgos_zsensor_state_handler_set(struct mgos_zsensor *handle,
   return true;
 }
 
-void mgos_zsensor_state_handler_reset(struct mgos_zsensor *handle) {
-  struct mg_zsensor *h = MG_ZSENSOR_CAST(handle);
-  if (h != NULL) {
-    h->state_handler.invoke = NULL;
-    h->state_handler.user_data = NULL;
-  }
-}
-
 bool mg_zsensor_state_try_update(struct mg_zsensor *handle, bool skip_notify_update) {
   if (!handle || !handle->state_handler.invoke) return false;
-  if (handle->poll_ticks == MGOS_ZTHING_NO_TICKS && 
-      handle->intr.pin != MGOS_ZTHING_NO_PIN) {
-    // The value update can be done only on interrupt.
-    return true;
-  }
-
+  
   ++handle->is_updating;
 
   struct mgos_zvariant val = MGOS_ZVARIANT_NAV;
@@ -317,7 +237,9 @@ struct mgos_zvariant *mgos_zsensor_state_get(struct mgos_zsensor *handle) {
   struct mg_zsensor *h = MG_ZSENSOR_CAST(handle);
   struct mgos_zvariant *res = &mg_zsensor_state_nav;
   if (h) {
-    if (h->is_updating > 0) {
+    // The value update can be done only on interrupt.
+    bool ret_cur_val = (h->poll_ticks == MGOS_ZTHING_NO_TICKS && h->intr.pin != MGOS_ZTHING_NO_PIN);
+    if ((h->is_updating > 0) || ret_cur_val) {
       res = &h->value;
     } else if (mg_zsensor_state_try_update(h, true)) {
       res = &h->value;

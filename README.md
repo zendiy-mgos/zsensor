@@ -50,7 +50,6 @@ enum mgos_app_init_result mgos_app_init(void) {
 
   if (!mgos_zsensor_poll_set(sens1, 2000) || 
       !mgos_zsensor_state_handler_set(sens1, mg_zsensor_state_h, NULL)) {
-    mgos_zsensor_close(sens1);
     return MGOS_APP_INIT_ERROR;
   }
 

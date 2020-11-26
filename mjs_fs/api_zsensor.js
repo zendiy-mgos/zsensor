@@ -4,28 +4,14 @@ load("api_events.js")
 
 let ZenSensor = {
   _crt: ffi('void *mgos_zsensor_create(char *, int, void*)'),
-  _cls: ffi('void mgos_zsensor_close(void *)'),
   _cfgc: ffi('void *mjs_zsensor_cfg_create(int)'),
-
   _polls: ffi('bool mgos_zsensor_poll_set(void *, int)'),
-  _pollp: ffi('bool mgos_zsensor_poll_pause(void *)'),
-  _pollr: ffi('bool mgos_zsensor_poll_restart(void *)'),
-  _pollc: ffi('bool mgos_zsensor_poll_clear(void *)'),
-
   _ints: ffi('bool mgos_zsensor_int_set(void *, int, int, int, int)'),
-  _intp: ffi('bool mgos_zsensor_int_pause(void *)'),
-  _intr: ffi('bool mgos_zsensor_int_restart(void *)'),
-  _intc: ffi('bool mgos_zsensor_int_clear(void *)'),
-
   _satg: ffi('void *mgos_zsensor_state_get(void *)'),
   _sng: ffi('char *mgos_zsensor_state_name_get(void *)'),
   _sns: ffi('bool mgos_zsensor_state_name_set(void *, int, char *)'),
   _snbv: ffi('char *mgos_zsensor_state_name_by_val(void *, int)'),
-  _snnc: ffi('void mgos_zsensor_state_names_clear(void *)'),
-
   _shs: ffi('bool mgos_zsensor_state_handler_set(void *, bool (*)(int, void *, userdata), userdata)'),
-  _shr: ffi('void mgos_zsensor_state_handler_reset(void *)'),
-
   _stated: ffi('void *mjs_zsensor_state_descr_get(void)'),
   _stateud: ffi('void *mjs_zsensor_state_upd_descr_get(void)'),
 
@@ -98,35 +84,13 @@ let ZenSensor = {
   _proto: {
     handle: null,
     id: null,
-    
-    close: function() {
-      ZenSensor._cls(this.handle);
-    },
 
     setPoll: function(ticks) {
       return ZenSensor._polls(this.handle, ticks);
     },
-    pausePoll: function() {
-      return ZenSensor._pollp(this.handle);
-    },
-    restartPoll: function() {
-      return ZenSensor._pollr(this.handle);
-    },
-    clearPoll: function() {
-      return ZenSensor._pollc(this.handle);
-    },
-  
+
     setInt: function(pin, mode, pullType, debounce) {
       return ZenSensor._ints(this.handle, pin, mode, pullType, (debounce || 0));
-    },
-    pauseInt: function() {
-      return ZenSensor._intp(this.handle);
-    },
-    restartInt: function() {
-      return ZenSensor._intr(this.handle);
-    },
-    clearInt: function() {
-      return ZenSensor._intc(this.handle);
     },
    
     getState: function() {
@@ -138,9 +102,6 @@ let ZenSensor = {
     getStateNameByVal: function(v) {
       return ZenSensor._snbv(this.handle, v);
     },
-    clearStateNames: function() {
-      return ZenSensor._snnc(this.handle);
-    },
     setStateName: function(v, n) {
       return ZenSensor._sns(this.handle, v, n);
     }, 
@@ -149,9 +110,6 @@ let ZenSensor = {
         let state = ZenSensor.parseState(d);
         return ud.h(a, state, ud.ud);
       }, {h:handler, ud:userdata});
-    },
-    resetStateHandler: function() {
-      return ZenSensor._shr(this.handle);
     },
 
     onStateUpd: function(handler, userdata) {
